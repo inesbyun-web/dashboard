@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>인스타그램 OKR 대시보드 · 26-2차</title>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #0e0e10;
+    --surface: #18181c;
+    --surface2: #1f1f25;
+    --border: rgba(255,255,255,0.07);
+    --text: #f0f0f0;
+    --muted: #888;
+    --blue: #4f8ef7;
+    --amber: #f5a623;
+    --green: #52c97a;
+    --purple: #9b7ff4;
+    --red: #f76f6f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Pretendard', sans-serif; font-size: 14px; min-height: 100vh; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 32px; border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .topbar-title { font-size: 16px; font-weight: 600; }
+  .topbar-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: rgba(79,142,247,0.15); color: var(--blue); font-weight: 500; }
+  .last-updated { font-size: 11px; color: var(--muted); }
+
+  .week-nav { display: flex; gap: 6px; flex-wrap: wrap; padding: 16px 32px; border-bottom: 1px solid var(--border); }
+  .wtab { font-size: 11px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; }
+  .wtab:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+  .wtab.active { background: var(--blue); color: #fff; border-color: var(--blue); font-weight: 500; }
+
+  .main { padding: 24px 32px; max-width: 1200px; }
+
+  .sec-label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; }
+
+  .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+  .mc { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+  .mc-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .mc-value { font-size: 26px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  .mc-sub { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+  .pb-bg { background: rgba(255,255,255,0.08); border-radius: 4px; height: 4px; overflow: hidden; }
+  .pb-fill { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(.4,0,.2,1); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 16px; }
+
+  .okr-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .okr-row:last-child { margin-bottom: 0; }
+  .okr-name { font-size: 12px; color: var(--muted); min-width: 80px; }
+  .okr-bar { flex: 1; }
+  .okr-vals { font-size: 11px; color: var(--muted); min-width: 80px; text-align: right; }
+  .okr-pct { font-size: 13px; font-weight: 700; min-width: 38px; text-align: right; }
+
+  .content-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .content-row:last-child { border-bottom: none; }
+  .cr-rank { font-size: 12px; font-weight: 700; color: var(--muted); min-width: 20px; }
+  .cr-rank.top { color: var(--amber); }
+  .cr-title { flex: 1; font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cr-tag { font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 600; flex-shrink: 0; }
+  .tag-r { background: rgba(245,166,35,0.15); color: var(--amber); }
+  .tag-c { background: rgba(79,142,247,0.15); color: var(--blue); }
+  .cr-views { font-size: 12px; color: var(--text); font-weight: 500; min-width: 60px; text-align: right; }
+
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label { color: var(--muted); }
+  .stat-val { font-weight: 600; }
+  .stat-indent { padding-left: 14px; }
+  .stat-indent .stat-label { color: rgba(255,255,255,0.3); font-size: 11px; }
+
+  .legend { display: flex; gap: 14px; margin-top: 10px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+  .empty-state { text-align: center; padding: 32px 16px; color: var(--muted); font-size: 12px; }
+
+  .loading { display: flex; align-items: center; justify-content: center; height: 200px; color: var(--muted); font-size: 13px; }
+
+  @media (max-width: 768px) {
+    .topbar { padding: 14px 16px; }
+    .week-nav { padding: 12px 16px; }
+    .main { padding: 16px; }
+    .metric-grid { grid-template-columns: repeat(2, 1fr); }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-title">인스타그램 OKR 대시보드</div>
+    <div class="topbar-sub">시즌 26-2차 · 3/29 ~ 6/29</div>
+  </div>
+  <div class="topbar-right">
+    <span class="badge" id="currentWeekBadge">3/29~4/4</span>
+    <span class="last-updated" id="lastUpdated">데이터 로딩 중...</span>
+  </div>
+</div>
+
+<div class="week-nav" id="weekNav"></div>
+
+<div class="main">
+  <div id="appContent"><div class="loading">데이터를 불러오는 중...</div></div>
+</div>
+
+<script>
+const SHEET_ID = '1hVCHD3aCaFq2rdv7zjXO-Pg9KRFbDEiV49jtvlDdXe0';
+const SHEET_NAME = 'weekly_data';
+
+const WEEKS = [
+  '3/29~4/4','4/7~4/13','4/14~4/20','4/21~4/27',
+  '4/28~5/4','5/5~5/11','5/12~5/18','5/19~5/25',
+  '5/26~6/1','6/2~6/8','6/9~6/15','6/16~6/22','6/23~6/29'
+];
+
+const OKR = {
+  totalViews: 5230000,
+  carouselViews: 1600000,
+  reelsViews: 3630000,
+  followers: 1300,
+  content: 38
+};
+
+let allData = [];
+let currentWeekIdx = 0;
+let charts = {};
+
+function fmt(n) {
+  if (!n && n !== 0) return '-';
+  n = Number(n);
+  if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, '') + '만';
+  return n.toLocaleString();
+}
+
+function pct(v, t) {
+  return Math.min(100, Math.round((Number(v) || 0) / t * 100));
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+  return lines.slice(1).map(line => {
+    const vals = line.split(',').map(v => v.trim().replace(/"/g, ''));
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = vals[i] || '');
+    return obj;
+  }).filter(row => row.week);
+}
+
+async function loadData() {
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('fetch failed');
+    const text = await res.text();
+    allData = parseCSV(text);
+    document.getElementById('lastUpdated').textContent = '업데이트: ' + new Date().toLocaleDateString('ko-KR');
+    render();
+  } catch (e) {
+    document.getElementById('lastUpdated').textContent = '데이터 로드 실패';
+    document.getElementById('appContent').innerHTML = `<div class="empty-state">구글시트 연결이 필요해요.<br>SHEET_ID를 설정해주세요.</div>`;
+  }
+}
+
+function buildWeekNav() {
+  const nav = document.getElementById('weekNav');
+  nav.innerHTML = '';
+  WEEKS.forEach((w, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'wtab' + (i === currentWeekIdx ? ' active' : '');
+    btn.textContent = w;
+    btn.onclick = () => {
+      currentWeekIdx = i;
+      document.querySelectorAll('.wtab').forEach((b, j) => b.classList.toggle('active', j === i));
+      document.getElementById('currentWeekBadge').textContent = WEEKS[i];
+      renderWeekContent();
+    };
+    nav.appendChild(btn);
+  });
+}
+
+function getWeekData(idx) {
+  return allData.find(d => d.week === WEEKS[idx]) || null;
+}
+
+function getCumulative(upToIdx) {
+  const cum = { totalViews: 0, carouselViews: 0, reelsViews: 0, followers: 0, content: 0 };
+  for (let i = 0; i <= upToIdx; i++) {
+    const d = getWeekData(i);
+    if (d) {
+      cum.totalViews += Number(d.total_views) || 0;
+      cum.carouselViews += Number(d.carousel_views) || 0;
+      cum.reelsViews += Number(d.reels_views) || 0;
+      cum.followers += Number(d.followers_gained) || 0;
+      cum.content += Number(d.content_count) || 0;
+    }
+  }
+  return cum;
+}
+
+function renderWeekContent() {
+  const d = getWeekData(currentWeekIdx);
+  const cum = getCumulative(currentWeekIdx);
+  const app = document.getElementById('appContent');
+
+  app.innerHTML = `
+    <div class="sec-label">이번 주 핵심 지표</div>
+    <div class="metric-grid">
+      <div class="mc">
+        <div class="mc-label">총 조회수</div>
+        <div class="mc-value" style="color:var(--blue)">${d ? fmt(d.total_views) : '-'}</div>
+        <div class="mc-sub">목표 주당 약 ${fmt(Math.round(OKR.totalViews/13))}</div>
+        <div class="pb-bg"><div class="pb-fill" style="width:${d ? pct(d.total_views, OKR.totalViews/13) : 0}%;background:var(--blue);"></div></div>
+      </div>
+      <div class="mc">
+        <div class="mc-label">캐러셀 조회수</div>
+        <div class="mc-value" style="color:var(--purple)">${d ? fmt(d.carousel_views) : '-'}</div>
+        <div class="mc-sub">목표 160만 회 (시즌)</div>
+        <div class="pb-bg"><div class="pb-fill" style="width:${d ? pct(d.carousel_views, OKR.carouselViews/13) : 0}%;background:var(--purple);"></div></div>
+      </div>
+      <div class="mc">
+        <div class="mc-label">릴스 조회수</div>
+        <div class="mc-value" style="color:var(--amber)">${d ? fmt(d.reels_views) : '-'}</div>
+        <div class="mc-sub">목표 363만 회 (시즌)</div>
+        <div class="pb-bg"><div class="pb-fill" style="width:${d ? pct(d.reels_views, OKR.reelsViews/13) : 0}%;background:var(--amber);"></div></div>
+      </div>
+      <div class="mc">
+        <div class="mc-label">획득 팔로워</div>
+        <div class="mc-value" style="color:var(--green)">${d ? (Number(d.followers_gained)||0) + '명' : '-'}</div>
+        <div class="mc-sub">목표 1,300명 (시즌)</div>
+        <div class="pb-bg"><div class="pb-fill" style="width:${d ? pct(d.followers_gained, OKR.followers/13) : 0}%;background:var(--green);"></div></div>
+      </div>
+    </div>
+
+    <div class="sec-label">시즌 누적 OKR 진척률</div>
+    <div class="card" style="margin-bottom:28px;">
+      ${[
+        ['총 조회수', cum.totalViews, OKR.totalViews, 'var(--blue)'],
+        ['캐러셀 조회수', cum.carouselViews, OKR.carouselViews, 'var(--purple)'],
+        ['릴스 조회수', cum.reelsViews, OKR.reelsViews, 'var(--amber)'],
+        ['획득 팔로워', cum.followers, OKR.followers, 'var(--green)'],
+        ['콘텐츠 발행', cum.content, OKR.content, 'var(--red)']
+      ].map(([name, val, target, color]) => `
+        <div class="okr-row">
+          <div class="okr-name">${name}</div>
+          <div class="okr-bar">
+            <div class="pb-bg" style="height:6px;">
+              <div class="pb-fill" style="width:${pct(val,target)}%;background:${color};"></div>
+            </div>
+          </div>
+          <div class="okr-vals">${fmt(val)} / ${fmt(target)}</div>
+          <div class="okr-pct" style="color:${color};">${pct(val,target)}%</div>
+        </div>`).join('')}
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">상위 콘텐츠 순위</div>
+        <div id="topContents">${renderTopContents(d)}</div>
+      </div>
+      <div class="card">
+        <div class="card-title">이번 주 발행 현황</div>
+        ${renderPublish(d, cum)}
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">팔로워 획득 추이</div>
+        <div style="position:relative;width:100%;height:200px;"><canvas id="followerChart"></canvas></div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green);"></div>주간 획득</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(82,201,122,0.3);"></div>누적</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">유형별 조회수 추이</div>
+        <div style="position:relative;width:100%;height:200px;"><canvas id="typeChart"></canvas></div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--purple);"></div>캐러셀</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--amber);"></div>릴스</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  setTimeout(() => initCharts(), 50);
+}
+
+function renderTopContents(d) {
+  if (!d) return '<div class="empty-state">데이터 없음</div>';
+  const items = [];
+  for (let i = 1; i <= 5; i++) {
+    const title = d[`top${i}_title`];
+    const views = d[`top${i}_views`];
+    const type = d[`top${i}_type`];
+    if (title) items.push({ title, views, type });
+  }
+  if (!items.length) return '<div class="empty-state">데이터 없음</div>';
+  return items.map((c, i) => `
+    <div class="content-row">
+      <span class="cr-rank ${i < 3 ? 'top' : ''}">${i+1}</span>
+      <span class="cr-title">${c.title}</span>
+      <span class="cr-tag ${c.type === '릴스' ? 'tag-r' : 'tag-c'}">${c.type||'캐러셀'}</span>
+      <span class="cr-views">${fmt(c.views)}</span>
+    </div>`).join('');
+}
+
+function renderPublish(d, cum) {
+  const total = (Number(d?.carousel_count)||0) + (Number(d?.reels_count)||0);
+  return `
+    <div class="stat-row"><span class="stat-label">총 발행</span><span class="stat-val">${d ? total : '-'}건</span></div>
+    <div class="stat-row"><span class="stat-label">캐러셀</span><span class="stat-val">${d ? (Number(d.carousel_count)||0) : '-'}건</span></div>
+    <div class="stat-row stat-indent"><span class="stat-label">└ 언꿀팁/큐레이션</span><span>${d ? (Number(d.curation_count)||0) : '-'}</span></div>
+    <div class="stat-row stat-indent"><span class="stat-label">└ 하이재킹</span><span>${d ? (Number(d.hijacking_count)||0) : '-'}</span></div>
+    <div class="stat-row"><span class="stat-label">릴스</span><span class="stat-val">${d ? (Number(d.reels_count)||0) : '-'}건</span></div>
+    <div class="stat-row" style="border:none;"><span class="stat-label">시즌 누적</span><span class="stat-val" style="color:var(--blue);">${cum.content} / 38건</span></div>`;
+}
+
+function initCharts() {
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+
+  const labels = WEEKS.map(w => w.split('~')[0]);
+  const followerWeekly = WEEKS.map((_, i) => Number(getWeekData(i)?.followers_gained) || 0);
+  const followerCum = WEEKS.map((_, i) => { let s = 0; for (let j = 0; j <= i; j++) s += followerWeekly[j]; return s; });
+  const carouselData = WEEKS.map((_, i) => Number(getWeekData(i)?.carousel_views) || 0);
+  const reelsData = WEEKS.map((_, i) => Number(getWeekData(i)?.reels_views) || 0);
+
+  const commonOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#666', font: { size: 10 }, maxRotation: 45, autoSkip: false } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#666', font: { size: 10 } } }
+    }
+  };
+
+  const fc = document.getElementById('followerChart');
+  if (fc) {
+    charts.follower = new Chart(fc, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: '주간', data: followerWeekly, backgroundColor: 'rgba(82,201,122,0.8)', borderRadius: 3 },
+          { label: '누적', data: followerCum, backgroundColor: 'rgba(82,201,122,0.25)', borderRadius: 3 }
+        ]
+      },
+      options: { ...commonOpts, scales: { ...commonOpts.scales, y: { ...commonOpts.scales.y, ticks: { ...commonOpts.scales.y.ticks, callback: v => v + '명' } } } }
+    });
+  }
+
+  const tc = document.getElementById('typeChart');
+  if (tc) {
+    charts.type = new Chart(tc, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: '캐러셀', data: carouselData, backgroundColor: 'rgba(155,127,244,0.8)', borderRadius: 3 },
+          { label: '릴스', data: reelsData, backgroundColor: 'rgba(245,166,35,0.8)', borderRadius: 3 }
+        ]
+      },
+      options: { ...commonOpts, scales: { ...commonOpts.scales, y: { ...commonOpts.scales.y, ticks: { ...commonOpts.scales.y.ticks, callback: v => v >= 10000 ? Math.round(v/10000) + '만' : v } } } }
+    });
+  }
+}
+
+function render() {
+  buildWeekNav();
+  renderWeekContent();
+}
+
+render();
+loadData();
+</script>
+</body>
+</html>
