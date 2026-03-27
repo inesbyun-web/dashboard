@@ -365,11 +365,11 @@ function renderWeekContent() {
         <div class="ai-body">
           <div class="ai-block">
             <div class="ai-block-title highlight">이번 주 분석</div>
-            ${d.analysis.split(' / ').map(s => `<div class="ai-item"><span class="ai-bullet">—</span><span>${s.trim()}</span></div>`).join('')}
+            ${d.analysis.split(' / ').map(s => `<div class="ai-item"><span>${s.trim()}</span></div>`).join('')}
           </div>
           <div class="ai-block">
             <div class="ai-block-title action">액션플랜</div>
-            ${d.action_plan.split(' / ').map(s => `<div class="ai-item"><span class="ai-bullet">→</span><span>${s.trim()}</span></div>`).join('')}
+            ${d.action_plan.split(' / ').map(s => `<div class="ai-item"><span>${s.trim()}</span></div>`).join('')}
           </div>
         </div>
       </div>
