@@ -323,27 +323,30 @@ function renderWeekContent() {
       </div>
     </div>
 
+    ${d && d.analysis ? `
     <div class="ai-section">
       <div class="ai-card">
         <div class="ai-header">
           <div class="ai-title">
-            <span>AI 분석 · 액션플랜</span>
-            <span class="ai-badge">Auto</span>
+            <span>분석 · 액션플랜</span>
+            <span class="ai-badge">이번 주</span>
           </div>
-          <button class="ai-refresh" onclick="generateAnalysis()">새로 생성 ↻</button>
         </div>
-        <div class="ai-body" id="aiAnalysis">
-          <div class="ai-loading">
-            <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
-            <span>데이터 분석 중...</span>
+        <div class="ai-body">
+          <div class="ai-block">
+            <div class="ai-block-title highlight">이번 주 분석</div>
+            ${d.analysis.split(' / ').map(s => `<div class="ai-item"><span class="ai-bullet">—</span><span>${s.trim()}</span></div>`).join('')}
+          </div>
+          <div class="ai-block">
+            <div class="ai-block-title action">액션플랜</div>
+            ${d.action_plan.split(' / ').map(s => `<div class="ai-item"><span class="ai-bullet">→</span><span>${s.trim()}</span></div>`).join('')}
           </div>
         </div>
       </div>
-    </div>
+    </div>` : ''}
   `;
 
   setTimeout(() => initCharts(), 50);
-  setTimeout(() => generateAnalysis(), 100);
 }
 
 function renderTopContents(d) {
