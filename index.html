@@ -168,6 +168,9 @@ async function loadData() {
     const text = await res.text();
     allData = parseCSV(text);
     document.getElementById('lastUpdated').textContent = '업데이트: ' + new Date().toLocaleDateString('ko-KR');
+    for (let i = WEEKS.length - 1; i >= 0; i--) {
+      if (allData.find(d => d.week === WEEKS[i])) { currentWeekIdx = i; break; }
+    }
     render();
   } catch (e) {
     document.getElementById('lastUpdated').textContent = '데이터 로드 실패';
