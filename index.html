@@ -84,6 +84,30 @@
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
   .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
 
+
+  .ai-section { margin-bottom: 28px; }
+  .ai-card { background: var(--surface); border: 1px solid rgba(79,142,247,0.25); border-radius: 12px; padding: 20px; }
+  .ai-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .ai-title { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .ai-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: rgba(79,142,247,0.15); color: var(--blue); font-weight: 600; }
+  .ai-refresh { font-size: 11px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; }
+  .ai-refresh:hover { border-color: var(--blue); color: var(--blue); }
+  .ai-body { font-size: 13px; color: var(--text); line-height: 1.8; }
+  .ai-loading { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+  .ai-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); animation: pulse 1.2s ease-in-out infinite; }
+  .ai-dot:nth-child(2) { animation-delay: 0.2s; }
+  .ai-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+  .ai-block { margin-bottom: 16px; }
+  .ai-block:last-child { margin-bottom: 0; }
+  .ai-block-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .ai-block-title.highlight { color: var(--blue); }
+  .ai-block-title.warning { color: var(--amber); }
+  .ai-block-title.action { color: var(--green); }
+  .ai-item { display: flex; gap: 8px; margin-bottom: 6px; font-size: 13px; color: var(--text); line-height: 1.6; }
+  .ai-item:last-child { margin-bottom: 0; }
+  .ai-bullet { color: var(--muted); flex-shrink: 0; margin-top: 2px; }
+  .ai-error { color: var(--muted); font-size: 12px; }
   .empty-state { text-align: center; padding: 32px 16px; color: var(--muted); font-size: 12px; }
 
   .loading { display: flex; align-items: center; justify-content: center; height: 200px; color: var(--muted); font-size: 13px; }
@@ -298,9 +322,28 @@ function renderWeekContent() {
         </div>
       </div>
     </div>
+
+    <div class="ai-section">
+      <div class="ai-card">
+        <div class="ai-header">
+          <div class="ai-title">
+            <span>AI 분석 · 액션플랜</span>
+            <span class="ai-badge">Auto</span>
+          </div>
+          <button class="ai-refresh" onclick="generateAnalysis()">새로 생성 ↻</button>
+        </div>
+        <div class="ai-body" id="aiAnalysis">
+          <div class="ai-loading">
+            <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
+            <span>데이터 분석 중...</span>
+          </div>
+        </div>
+      </div>
+    </div>
   `;
 
   setTimeout(() => initCharts(), 50);
+  setTimeout(() => generateAnalysis(), 100);
 }
 
 function renderTopContents(d) {
@@ -380,6 +423,104 @@ function initCharts() {
       },
       options: { ...commonOpts, scales: { ...commonOpts.scales, y: { ...commonOpts.scales.y, ticks: { ...commonOpts.scales.y.ticks, callback: v => v >= 10000 ? Math.round(v/10000) + '만' : v } } } }
     });
+  }
+}
+
+
+async function generateAnalysis() {
+  const d = getWeekData(currentWeekIdx);
+  const cum = getCumulative(currentWeekIdx);
+  const el = document.getElementById('aiAnalysis');
+  if (!el) return;
+
+  el.innerHTML = `<div class="ai-loading"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span>분석 생성 중...</span></div>`;
+
+  const weekLabel = WEEKS[currentWeekIdx];
+  const topContents = [];
+  if (d) {
+    for (let i = 1; i <= 5; i++) {
+      if (d[`top${i}_title`]) topContents.push(`${i}위: ${d[`top${i}_title`]} (${d[`top${i}_type`]}, ${fmt(d[`top${i}_views`])} 조회)`);
+    }
+  }
+
+  const cumPct = {
+    total: pct(cum.totalViews, OKR.totalViews),
+    carousel: pct(cum.carouselViews, OKR.carouselViews),
+    reels: pct(cum.reelsViews, OKR.reelsViews),
+    followers: pct(cum.followers, OKR.followers),
+    content: pct(cum.content, OKR.content)
+  };
+
+  const weekNum = currentWeekIdx + 1;
+  const expectedPct = Math.round(weekNum / 13 * 100);
+
+  const prompt = `당신은 인스타그램 콘텐츠 마케팅 전문가입니다. 아래 주간 데이터를 분석하고 한국어로 간결하게 답해주세요.
+
+[시즌 정보]
+- 시즌: 26-2차 (4월~6월, 총 13주)
+- 현재: ${weekLabel} (${weekNum}주차)
+- 예상 진척률: ${expectedPct}%
+
+[OKR 목표]
+- 총 조회수: 523만 회
+- 캐러셀 조회수: 160만 회
+- 릴스 조회수: 363만 회
+- 획득 팔로워: 1,300명
+- 콘텐츠 발행: 38개 (캐러셀 24 + 릴스 12 + 기타 2)
+
+[이번 주 실적]
+${d ? `- 총 조회수: ${fmt(d.total_views)}
+- 캐러셀 조회수: ${fmt(d.carousel_views)}
+- 릴스 조회수: ${fmt(d.reels_views)}
+- 획득 팔로워: ${d.followers_gained}명
+- 발행: 캐러셀 ${d.carousel_count}건 (큐레이션 ${d.curation_count}, 하이재킹 ${d.hijacking_count}), 릴스 ${d.reels_count}건
+- 상위 콘텐츠: ${topContents.join(' / ')}` : '이번 주 데이터 없음'}
+
+[시즌 누적 진척률]
+- 총 조회수: ${cumPct.total}% (목표 대비)
+- 캐러셀: ${cumPct.carousel}%
+- 릴스: ${cumPct.reels}%
+- 팔로워: ${cumPct.followers}%
+- 콘텐츠 발행: ${cumPct.content}%
+
+아래 형식으로 정확히 응답해주세요. JSON 형식으로만 답하고 다른 텍스트는 절대 포함하지 마세요:
+{
+  "highlights": ["잘된 점 1", "잘된 점 2"],
+  "concerns": ["아쉬운 점 또는 리스크 1", "아쉬운 점 2"],
+  "actions": ["다음 주 액션플랜 1", "다음 주 액션플랜 2", "다음 주 액션플랜 3"]
+}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    const text = data.content?.[0]?.text || '';
+    const clean = text.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+
+    el.innerHTML = `
+      <div class="ai-block">
+        <div class="ai-block-title highlight">이번 주 하이라이트</div>
+        ${result.highlights.map(h => `<div class="ai-item"><span class="ai-bullet">+</span><span>${h}</span></div>`).join('')}
+      </div>
+      <div class="ai-block">
+        <div class="ai-block-title warning">체크 포인트</div>
+        ${result.concerns.map(c => `<div class="ai-item"><span class="ai-bullet">!</span><span>${c}</span></div>`).join('')}
+      </div>
+      <div class="ai-block">
+        <div class="ai-block-title action">다음 주 액션플랜</div>
+        ${result.actions.map((a, i) => `<div class="ai-item"><span class="ai-bullet">${i+1}.</span><span>${a}</span></div>`).join('')}
+      </div>`;
+  } catch (e) {
+    el.innerHTML = `<div class="ai-error">분석 생성 실패. "새로 생성" 버튼을 눌러 다시 시도해주세요.</div>`;
   }
 }
 
